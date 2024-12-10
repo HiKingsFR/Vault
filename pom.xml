@@ -81,11 +81,6 @@
 			<version>${api.version}</version>
 		</dependency>
 		<dependency>
-			<groupId>org.bstats</groupId>
-			<artifactId>bstats-bukkit</artifactId>
-			<version>3.0.0</version>
-		</dependency>
-		<dependency>
 			<groupId>de.hydrox.bukkit</groupId>
 			<artifactId>DroxPerms</artifactId>
 			<version>0.5.0</version>
