@@ -15,10 +15,6 @@
  */
 package net.milkbowl.vault;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.net.URL;
-import java.net.URLConnection;
 import java.util.Collection;
 import java.util.logging.Logger;
 
@@ -58,32 +54,18 @@ import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
-import org.bukkit.entity.Player;
-import org.bukkit.event.EventHandler;
-import org.bukkit.event.EventPriority;
-import org.bukkit.event.Listener;
-import org.bukkit.event.player.PlayerJoinEvent;
-import org.bukkit.permissions.PermissionDefault;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.RegisteredServiceProvider;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.ServicesManager;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.JSONValue;
 
 import net.milkbowl.vault.chat.plugins.Chat_TotalPermissions;
 
 public class Vault extends JavaPlugin {
 
-    private static final String VAULT_BUKKIT_URL = "https://dev.bukkit.org/projects/Vault";
     private static Logger log;
     private Permission perms;
-    private String newVersionTitle = "";
-    private double newVersion = 0;
-    private double currentVersion = 0;
-    private String currentVersionTitle = "";
     private ServicesManager sm;
     private Vault plugin;
 
@@ -98,59 +80,13 @@ public class Vault extends JavaPlugin {
     public void onEnable() {
         plugin = this;
         log = this.getLogger();
-        currentVersionTitle = getDescription().getVersion().split("-")[0];
-        currentVersion = Double.valueOf(currentVersionTitle.replaceFirst("\\.", ""));
         sm = getServer().getServicesManager();
-        // set defaults
-        getConfig().addDefault("update-check", true);
-        getConfig().options().copyDefaults(true);
-        saveConfig();
         // Load Vault Addons
         loadPermission();
         loadChat();
 
         getCommand("vault-info").setExecutor(this);
         getCommand("vault-convert").setExecutor(this);
-        getServer().getPluginManager().registerEvents(new VaultListener(), this);
-        // Schedule to check the version every 30 minutes for an update. This is to update the most recent 
-        // version so if an admin reconnects they will be warned about newer versions.
-        this.getServer().getScheduler().runTask(this, new Runnable() {
-
-            @Override
-            public void run() {
-                // Programmatically set the default permission value cause Bukkit doesn't handle plugin.yml properly for Load order STARTUP plugins
-                org.bukkit.permissions.Permission perm = getServer().getPluginManager().getPermission("vault.update");
-                if (perm == null)
-                {
-                    perm = new org.bukkit.permissions.Permission("vault.update");
-                    perm.setDefault(PermissionDefault.OP);
-                    plugin.getServer().getPluginManager().addPermission(perm);
-                }
-                perm.setDescription("Allows a user or the console to check for vault updates");
-
-                getServer().getScheduler().runTaskTimerAsynchronously(plugin, new Runnable() {
-
-                    @Override
-                    public void run() {
-                        if (getServer().getConsoleSender().hasPermission("vault.update") && getConfig().getBoolean("update-check", true)) {
-                            try {
-                            	log.info("Checking for Updates ... ");
-                                newVersion = updateCheck(currentVersion);
-                                if (newVersion > currentVersion) {
-                                    log.warning("Stable Version: " + newVersionTitle + " is out!" + " You are still running version: " + currentVersionTitle);
-                                    log.warning("Update at: https://dev.bukkit.org/projects/vault");
-                                } else if (currentVersion > newVersion) {
-                                    log.info("Stable Version: " + newVersionTitle + " | Current Version: " + currentVersionTitle);
-                                }
-                            } catch (Exception e) {
-                                // ignore exceptions
-                            }
-                        }
-                    }
-                }, 0, 432000);
-
-            }
-        });
 
         log.info(String.format("Enabled Version %s", getDescription().getVersion()));
     }
@@ -433,46 +369,4 @@ public class Vault extends JavaPlugin {
         }
     }
 
-    public double updateCheck(double currentVersion) {
-        try {
-            URL url = new URL("https://api.curseforge.com/servermods/files?projectids=33184");
-            URLConnection conn = url.openConnection();
-            conn.setReadTimeout(5000);
-            conn.addRequestProperty("User-Agent", "Vault Update Checker");
-            conn.setDoOutput(true);
-            final BufferedReader reader = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-            final String response = reader.readLine();
-            final JSONArray array = (JSONArray) JSONValue.parse(response);
-
-            if (array.size() == 0) {
-                this.getLogger().warning("No files found, or Feed URL is bad.");
-                return currentVersion;
-            }
-            // Pull the last version from the JSON
-            newVersionTitle = ((String) ((JSONObject) array.get(array.size() - 1)).get("name")).replace("Vault", "").trim();
-            return Double.valueOf(newVersionTitle.replaceFirst("\\.", "").trim());
-        } catch (Exception e) {
-            log.info("There was an issue attempting to check for the latest version.");
-        }
-        return currentVersion;
-    }
-
-    public class VaultListener implements Listener {
-
-        @EventHandler(priority = EventPriority.MONITOR)
-        public void onPlayerJoin(PlayerJoinEvent event) {
-            Player player = event.getPlayer();
-            if (perms.has(player, "vault.update")) {
-                try {
-                    if (newVersion > currentVersion) {
-                        player.sendMessage("Vault " +  newVersionTitle + " is out! You are running " + currentVersionTitle);
-                        player.sendMessage("Update Vault at: " + VAULT_BUKKIT_URL);
-                    }
-                } catch (Exception e) {
-                    // Ignore exceptions
-                }
-            }
-        }
-
-    }
 }
