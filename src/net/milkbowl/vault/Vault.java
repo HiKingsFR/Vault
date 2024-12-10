@@ -30,6 +30,8 @@ import net.milkbowl.vault.chat.plugins.Chat_iChat;
 import net.milkbowl.vault.chat.plugins.Chat_mChat;
 import net.milkbowl.vault.chat.plugins.Chat_mChatSuite;
 import net.milkbowl.vault.chat.plugins.Chat_rscPermissions;
+import net.milkbowl.vault.economy.Economy;
+import net.milkbowl.vault.economy.plugins.Economy_Essentials;
 import net.milkbowl.vault.permission.Permission;
 import net.milkbowl.vault.permission.plugins.Permission_DroxPerms;
 import net.milkbowl.vault.permission.plugins.Permission_GroupManager;
@@ -76,6 +78,7 @@ public class Vault extends JavaPlugin {
         log = this.getLogger();
         sm = getServer().getServicesManager();
         // Load Vault Addons
+        loadEconomy();
         loadPermission();
         loadChat();
 
@@ -126,6 +129,11 @@ public class Vault extends JavaPlugin {
         hookChat("TotalPermissions", Chat_TotalPermissions.class, ServicePriority.Normal, "net.ar97.totalpermissions.TotalPermissions");
     }
 
+    private void loadEconomy() {
+
+        // Try to load Essentials Economy
+        hookEconomy("Essentials Economy", Economy_Essentials.class, ServicePriority.Low, "com.earth2me.essentials.api.Economy", "com.earth2me.essentials.api.NoLoanPermittedException",  "com.earth2me.essentials.api.UserDoesNotExistException");
+    }
     /**
      * Attempts to load Permission Addons
      */
@@ -191,6 +199,18 @@ public class Vault extends JavaPlugin {
             }
         } catch (Exception e) {
             log.severe(String.format("[Chat] There was an error hooking %s - check to make sure you're using a compatible version!", name));
+        }
+    }
+
+    private void hookEconomy (String name, Class<? extends Economy> hookClass, ServicePriority priority, String...packages) {
+        try {
+            if (packagesExists(packages)) {
+                Economy econ = hookClass.getConstructor(Plugin.class).newInstance(this);
+                sm.register(Economy.class, econ, this, priority);
+                log.info(String.format("[Economy] %s found: %s", name, econ.isEnabled() ? "Loaded" : "Waiting"));
+            }
+        } catch (Exception e) {
+            log.severe(String.format("[Economy] There was an error hooking %s - check to make sure you're using a compatible version!", name));
         }
     }
 
